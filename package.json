@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "json-server": "^1.0.0-beta.15",
+    "nodemon": "^3.1.14"
+  },
+  "name": "chegaai_unifor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "dev": "nodemon server.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmirellaLima/ChegaAi_unifor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mmirellaLima/ChegaAi_unifor/issues"
+  },
+  "homepage": "https://github.com/mmirellaLima/ChegaAi_unifor#readme"
+}
