@@ -29,6 +29,7 @@ Base: `http://localhost:3001/api`
 
 | Recurso | Métodos |
 |---------|---------|
+| `/login` | POST |
 | `/usuarios` | GET, GET/:id, POST, PUT/:id, DELETE/:id |
 | `/comunidades` | GET, GET/:id, POST, PUT/:id, DELETE/:id |
 | `/membros-comunidade` | GET, GET/:id_usuario_membro/:id_comunidade, POST, PUT, DELETE |
@@ -54,6 +55,19 @@ curl -X POST http://localhost:3001/api/usuarios \
     "bio_usuario": "Olá!"
   }'
 ```
+
+## Exemplo — login
+
+```bash
+curl -X POST http://localhost:3001/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_usuario": "maria@email.com",
+    "senha_usuario": "123456"
+  }'
+```
+
+Retorna `401` quando o email ou a senha estão incorretos.
 
 ## Retorna `[]` mas tem dados no Table Editor?
 

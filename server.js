@@ -24,6 +24,7 @@ app.get("/", (_req, res) => {
   res.json({
     message: "API ChegaAi (Supabase)",
     endpoints: {
+      login: "/api/login",
       usuarios: "/api/usuarios",
       comunidades: "/api/comunidades",
       membrosComunidade: "/api/membros-comunidade",
