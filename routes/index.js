@@ -400,6 +400,149 @@ router.get("/comunidades/:id/detalhes/:id_usuario", async (req, res) => {
 });
 
 // ==========================================
+// ROTAS CUSTOMIZADAS DE MENSAGENS
+// ==========================================
+
+// 7. Buscar conversa entre dois usuários (thread completo)
+router.get("/mensagens/conversa/:id1/:id2", async (req, res) => {
+  const { id1, id2 } = req.params;
+
+  try {
+    // Buscar mensagens onde (remetente=id1 e destinatario=id2) OU (remetente=id2 e destinatario=id1)
+    const { data: enviadas, error: errEnviadas } = await supabase
+      .from("mensagens")
+      .select("*")
+      .eq("id_remetente", id1)
+      .eq("id_destinatario", id2);
+
+    if (errEnviadas) return res.status(500).json({ error: errEnviadas.message });
+
+    const { data: recebidas, error: errRecebidas } = await supabase
+      .from("mensagens")
+      .select("*")
+      .eq("id_remetente", id2)
+      .eq("id_destinatario", id1);
+
+    if (errRecebidas) return res.status(500).json({ error: errRecebidas.message });
+
+    // Juntar e ordenar por data de envio
+    const todas = [...(enviadas || []), ...(recebidas || [])].sort(
+      (a, b) => new Date(a.enviado_em) - new Date(b.enviado_em)
+    );
+
+    res.json(todas);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Listar todas as conversas de um usuário (lista de contatos com última mensagem)
+router.get("/mensagens/conversas/:id", async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    // Buscar todas as mensagens onde o usuário é remetente ou destinatário
+    const { data: enviadas, error: errEnviadas } = await supabase
+      .from("mensagens")
+      .select("*")
+      .eq("id_remetente", userId)
+      .order("enviado_em", { ascending: false });
+
+    if (errEnviadas) return res.status(500).json({ error: errEnviadas.message });
+
+    const { data: recebidas, error: errRecebidas } = await supabase
+      .from("mensagens")
+      .select("*")
+      .eq("id_destinatario", userId)
+      .order("enviado_em", { ascending: false });
+
+    if (errRecebidas) return res.status(500).json({ error: errRecebidas.message });
+
+    const todasMensagens = [...(enviadas || []), ...(recebidas || [])].sort(
+      (a, b) => new Date(b.enviado_em) - new Date(a.enviado_em)
+    );
+
+    // Identificar IDs únicos de contatos
+    const contatosMap = new Map();
+    for (const msg of todasMensagens) {
+      const outroId =
+        String(msg.id_remetente) === String(userId)
+          ? msg.id_destinatario
+          : msg.id_remetente;
+
+      if (!contatosMap.has(String(outroId))) {
+        // Contar não lidas: mensagens recebidas sem lido_em
+        const naoLidas = todasMensagens.filter(
+          (m) =>
+            String(m.id_remetente) === String(outroId) &&
+            String(m.id_destinatario) === String(userId) &&
+            !m.lido_em
+        ).length;
+
+        contatosMap.set(String(outroId), {
+          id_contato: outroId,
+          ultima_mensagem: msg,
+          nao_lidas: naoLidas,
+        });
+      }
+    }
+
+    const contatos = Array.from(contatosMap.values());
+
+    if (contatos.length === 0) {
+      return res.json([]);
+    }
+
+    // Buscar dados dos contatos
+    const idsContatos = contatos.map((c) => c.id_contato);
+    const { data: usuarios, error: errUsuarios } = await supabase
+      .from("usuario")
+      .select(
+        "id_usuario, nome_usuario, apelido_usuario, fotoperfil_url, ultimavezonline"
+      )
+      .in("id_usuario", idsContatos);
+
+    if (errUsuarios) return res.status(500).json({ error: errUsuarios.message });
+
+    // Montar resultado final
+    const resultado = contatos.map((c) => {
+      const usuario = (usuarios || []).find(
+        (u) => String(u.id_usuario) === String(c.id_contato)
+      );
+      return {
+        ...c,
+        usuario,
+      };
+    });
+
+    res.json(resultado);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Marcar mensagens de uma conversa como lidas
+router.patch("/mensagens/marcar-lido/:remetente/:destinatario", async (req, res) => {
+  const { remetente, destinatario } = req.params;
+  const agora = new Date().toISOString();
+
+  try {
+    const { data, error } = await supabase
+      .from("mensagens")
+      .update({ lido_em: agora })
+      .eq("id_remetente", remetente)
+      .eq("id_destinatario", destinatario)
+      .is("lido_em", null)
+      .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ message: "Mensagens marcadas como lidas", data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
 // CRUD GENÉRICO
 // ==========================================
 
